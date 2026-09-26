@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>蔵の広報アシスタント</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Old+Mincho:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --washi: #F7F5EF;
+    --paper: #FFFFFF;
+    --sumi: #22211E;
+    --sumi-sub: #5C5A55;
+    --line: #DEDAD0;
+    --sugi: #5E7A3A;
+    --sugi-dark: #4A6230;
+    --sugi-pale: #EEF2E7;
+    --disabled: #B9B6AE;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; }
+  body {
+    background: var(--washi);
+    color: var(--sumi);
+    font-family: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    font-size: 17px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, textarea { font: inherit; color: inherit; }
+
+  /* ---------- header ---------- */
+  header {
+    display: flex; align-items: center; gap: 24px;
+    padding: 12px 32px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; white-space: nowrap; }
+  .brand-mark { width: 14px; height: 14px; border-radius: 50%; background: var(--sugi); }
+  .steps { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; flex: 1; justify-content: center; }
+  .steps li {
+    font-size: 14px; color: var(--sumi-sub);
+    padding: 4px 12px; border-radius: 999px; white-space: nowrap;
+  }
+  .steps li.active { background: var(--sugi); color: #fff; font-weight: 700; }
+  .steps li.done { color: var(--sugi-dark); }
+  .mode {
+    display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--sumi-sub); white-space: nowrap;
+  }
+  .mode button {
+    border: 1px solid var(--line); background: var(--paper); padding: 2px 10px; border-radius: 6px; cursor: pointer;
+  }
+  .mode button[aria-pressed="true"] { border-color: var(--sumi); background: var(--sumi); color: #fff; }
+
+  /* ---------- screens ---------- */
+  main { max-width: 1120px; margin: 0 auto; padding: 28px 32px 48px; }
+  .screen { display: none; }
+  .screen.active { display: block; animation: fade .25s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  h1 { font-size: 26px; margin: 0 0 4px; font-weight: 700; }
+  .lead { color: var(--sumi-sub); margin: 0 0 22px; }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 24px; }
+  .note { font-size: 14px; color: var(--sumi-sub); }
+
+  label.field { display: block; margin-bottom: 16px; }
+  label.field > span { display: block; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  input[type="text"], textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: #FDFCF9;
+  }
+  input[type="text"]:focus, textarea:focus { outline: 2px solid var(--sugi); outline-offset: -1px; }
+  textarea { resize: vertical; min-height: 88px; }
+
+  .actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px 24px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--paper); cursor: pointer; font-weight: 700; min-height: 48px;
+  }
+  .btn:hover { border-color: var(--sumi-sub); }
+  .btn.primary { background: var(--sugi); border-color: var(--sugi); color: #fff; font-size: 18px; padding: 12px 36px; }
+  .btn.primary:hover { background: var(--sugi-dark); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--sumi-sub); font-weight: 500; }
+
+  /* S0 */
+  .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+  .profile-grid .wide { grid-column: 1 / -1; }
+  .once { display: inline-block; margin-top: 4px; font-size: 13px; color: var(--sugi-dark); background: var(--sugi-pale); padding: 2px 10px; border-radius: 6px; }
+
+  /* S1 */
+  .material { display: grid; grid-template-columns: 320px 1fr; gap: 28px; align-items: start; }
+  .photo-box { position: relative; }
+  .photo-box canvas { width: 100%; aspect-ratio: 1; display: block; border-radius: 10px; background: #333; }
+  .photo-tag { position: absolute; top: 8px; left: 8px; font-size: 12px; background: rgba(255,255,255,.9); padding: 1px 8px; border-radius: 4px; }
+  .upload { margin-top: 10px; display: flex; gap: 8px; }
+  .upload .btn { flex: 1; padding: 8px 12px; min-height: 40px; font-weight: 500; font-size: 15px; }
+  .material textarea { min-height: 150px; font-size: 18px; }
+
+  /* S2 */
+  .group-title { font-size: 15px; font-weight: 700; margin: 0 0 10px; }
+  .audiences { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 26px; }
+  .choice {
+    text-align: left; border: 2px solid var(--line); background: var(--paper); border-radius: 12px;
+    padding: 16px 18px; cursor: pointer; position: relative; line-height: 1.5;
+  }
+  .choice:hover { border-color: var(--sumi-sub); }
+  .choice[aria-pressed="true"] { border-color: var(--sugi); background: var(--sugi-pale); }
+  .choice .key { font-size: 13px; font-weight: 700; color: var(--sugi-dark); letter-spacing: .05em; }
+  .choice .who { display: block; font-size: 19px; font-weight: 700; margin: 2px 0; }
+  .choice .sub { display: block; font-size: 14px; color: var(--sumi-sub); }
+  .choice .check {
+    position: absolute; top: 14px; right: 14px; width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid var(--line); background: var(--paper);
+  }
+  .choice[aria-pressed="true"] .check { border-color: var(--sugi); background: var(--sugi); box-shadow: inset 0 0 0 4px var(--sugi-pale); }
+  .formats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .formats .choice { padding: 14px 18px; }
+  .formats .who { font-size: 17px; }
+  .choice:disabled { cursor: not-allowed; color: var(--disabled); background: #F1EFEA; border-style: dashed; }
+  .choice:disabled .sub { color: var(--disabled); }
+  .soon { display: inline-block; font-size: 12px; font-weight: 700; color: var(--sumi-sub); border: 1px solid var(--disabled); border-radius: 4px; padding: 0 6px; margin-top: 4px; }
+  .rec { font-size: 12px; font-weight: 700; color: var(--sugi-dark); }
+
+  /* S3 */
+  .loading { min-height: 50vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+  .loading p { font-size: 22px; font-weight: 700; margin: 0; }
+  .loading .sub { font-size: 15px; color: var(--sumi-sub); min-height: 1.7em; }
+  .bar { width: min(360px, 80vw); height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--sugi); }
+  .bar i.run { animation: bar 1.5s ease-in-out forwards; }
+  @keyframes bar { to { width: 100%; } }
+
+  /* S4 */
+  .result { display: grid; grid-template-columns: minmax(0, 440px) 1fr; gap: 32px; align-items: start; }
+  .result-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+  .result-head h1 { margin: 0; }
+  .pill { font-size: 14px; background: var(--sugi-pale); color: var(--sugi-dark); padding: 2px 12px; border-radius: 999px; font-weight: 700; }
+  .pill.gray { background: #ECEAE4; color: var(--sumi-sub); }
+
+  .sns { background: #fff; border: 1px solid #DBDBDB; border-radius: 14px; overflow: hidden; color: #111; font-family: -apple-system, "Hiragino Sans", "Zen Kaku Gothic New", sans-serif; }
+  .sns-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; font-size: 14px; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--sugi); color: #fff; display: grid; place-items: center; font-family: "Zen Old Mincho", serif; font-weight: 700; font-size: 16px; flex: none; }
+  .sns-name { font-weight: 700; line-height: 1.3; }
+  .sns-meta { color: #737373; font-size: 13px; line-height: 1.3; }
+  .sns canvas { display: block; width: 100%; aspect-ratio: 1; }
+  .ig-icons { display: flex; gap: 14px; padding: 10px 14px 4px; }
+  .ig-icons i { width: 22px; height: 22px; border: 2px solid #111; border-radius: 6px; display: block; }
+  .ig-icons i:first-child { border-radius: 50% 50% 40% 40%; }
+  .ig-caption { padding: 4px 14px 14px; font-size: 15px; line-height: 1.65; white-space: pre-wrap; }
+  .ig-caption b { margin-right: 6px; }
+  .tags { color: #00376B; }
+  .x-body { padding: 0 16px 12px 60px; font-size: 16px; line-height: 1.6; white-space: pre-wrap; margin-top: -6px; }
+  .x-body .tags { color: #1D6FA5; }
+  .x-img { margin: 0 16px 12px 60px; border-radius: 14px; overflow: hidden; border: 1px solid #E6E6E6; }
+  .x-foot { display: flex; justify-content: space-between; padding: 0 16px 12px 60px; font-size: 13px; color: #737373; }
+
+  .panel { display: flex; flex-direction: column; gap: 12px; }
+  .panel .btn { width: 100%; justify-content: flex-start; padding: 14px 20px; font-size: 17px; }
+  .panel .btn.primary { justify-content: center; }
+  .panel .btn .hint { margin-left: auto; font-weight: 400; font-size: 13px; color: var(--sumi-sub); }
+  .panel .btn.primary .hint { color: rgba(255,255,255,.85); }
+  .panel .btn.primary.copied { background: var(--sugi-dark); border-color: var(--sugi-dark); color: #fff; }
+  .tips { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+  .tips h2 { font-size: 14px; margin: 0 0 6px; color: var(--sugi-dark); }
+  .tips ul { margin: 0; padding-left: 1.2em; font-size: 15px; line-height: 1.7; }
+  .confirm { font-size: 14px; color: var(--sumi-sub); border-left: 3px solid var(--sugi); padding: 2px 0 2px 12px; margin: 4px 0 0; }
+  .toast { font-size: 14px; color: #8A4B12; background: #FBF1E4; padding: 8px 12px; border-radius: 8px; display: none; }
+
+  .sns.x { max-width: 540px; }
+  .x-img { max-width: 360px; }
+  /* PCではInstagramのデスクトップ表示のように、画像の横にキャプションを並べる */
+  @media (min-width: 1001px) {
+    .result { grid-template-columns: minmax(0, 1fr) 320px; }
+    .sns.ig {
+      display: grid; grid-template-columns: 420px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto;
+      height: 422px;
+    }
+    .sns.ig canvas { grid-column: 1; grid-row: 1 / 4; width: 420px; height: 420px; }
+    .sns.ig .sns-head { grid-column: 2; grid-row: 1; border-bottom: 1px solid #EFEFEF; }
+    .sns.ig .ig-caption { grid-column: 2; grid-row: 2; overflow: auto; padding-top: 12px; }
+    .sns.ig .ig-icons { grid-column: 2; grid-row: 3; border-top: 1px solid #EFEFEF; padding: 10px 14px; }
+  }
+  @media (max-width: 900px) {
+    header { flex-wrap: wrap; padding: 10px 16px; gap: 8px 16px; }
+    .steps { order: 3; flex-basis: 100%; justify-content: flex-start; overflow-x: auto; }
+    .mode { margin-left: auto; }
+    main { padding: 20px 16px 40px; }
+    .profile-grid, .material, .result { grid-template-columns: 1fr; }
+    .material .photo-box { max-width: 360px; }
+    .audiences, .formats { grid-template-columns: 1fr; }
+    .result .sns { max-width: 480px; }
+  }
+  @media (max-width: 520px) {
+    body { font-size: 16px; }
+    h1 { font-size: 22px; }
+    .steps li { padding: 3px 8px; font-size: 13px; }
+    .btn.primary { width: 100%; }
+    .actions { flex-direction: column-reverse; align-items: stretch; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span class="brand-mark"></span>蔵の広報アシスタント</div>
+  <ol class="steps" id="steps">
+    <li data-step="0">蔵の情報</li>
+    <li data-step="1">素材</li>
+    <li data-step="2">相手と形式</li>
+    <li data-step="4">投稿</li>
+  </ol>
+  <div class="mode" title="発表本番はダミーで動かしてください">
+    生成
+    <button type="button" data-mode="dummy" aria-pressed="true">ダミー</button>
+    <button type="button" data-mode="api" aria-pressed="false">API</button>
+  </div>
+</header>
+
+<main>
+  <!-- S0 蔵プロフィール -->
+  <section class="screen" id="s0">
+    <h1>蔵の情報</h1>
+    <p class="lead">投稿の語り口や固有名詞は、この情報をもとに作られます。</p>
+    <div class="card">
+      <div class="profile-grid">
+        <label class="field"><span>蔵名</span><input type="text" id="p-name" value="霞川酒造"></label>
+        <label class="field"><span>所在地</span><input type="text" id="p-pref" value="山形県"></label>
+        <label class="field wide"><span>代表銘柄</span><input type="text" id="p-brand" value="霞川 純米吟醸"></label>
+        <label class="field wide"><span>蔵の特徴</span><textarea id="p-feature" rows="2">創業百年余りの小さな蔵。雪解け水と県産米で、穏やかな香りの酒を造る。</textarea></label>
+      </div>
+      <span class="once">初回のみ。以降の投稿はこの情報をもとに作成します</span>
+    </div>
+    <div class="actions">
+      <span></span>
+      <button class="btn primary" data-go="1">次へ</button>
+    </div>
+  </section>
+
+  <!-- S1 素材 -->
+  <section class="screen" id="s1">
+    <h1>素材を入れる</h1>
+    <p class="lead">写真を1枚と、ひとことメモ。書くのはこれだけです。</p>
+    <div class="card material">
+      <div>
+        <div class="photo-box">
+          <canvas id="thumb" width="640" height="640"></canvas>
+          <span class="photo-tag" id="photo-tag">サンプル画像</span>
+        </div>
+        <div class="upload">
+          <button class="btn" id="pick">写真を選ぶ</button>
+          <button class="btn ghost" id="clear-photo" hidden>サンプルに戻す</button>
+        </div>
+        <input type="file" id="file" accept="image/*" hidden>
+      </div>
+      <label class="field" style="margin:0">
+        <span>ひとことメモ</span>
+        <textarea id="memo">ひやおろし出荷はじまりました。夏を越して味がまろやかに。10月12日（日）の蔵開きで試飲できます</textarea>
+        <span class="note" style="display:block;margin-top:6px;font-weight:400">箇条書きや話し言葉のままで大丈夫です。</span>
+      </label>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" data-go="0">戻る</button>
+      <button class="btn primary" data-go="2">次へ</button>
+    </div>
+  </section>
+
+  <!-- S2 相手・形式 -->
+  <section class="screen" id="s2">
+    <h1>誰に届けますか</h1>
+    <p class="lead">同じ素材でも、相手に合わせて言葉と見せ方を変えます。</p>
+
+    <p class="group-title">届けたい相手</p>
+    <div class="audiences" id="audiences"></div>
+
+    <p class="group-title">出力形式</p>
+    <div class="formats" id="formats">
+      <button class="choice" data-format="ig"><span class="check"></span><span class="who">Instagram投稿</span><span class="sub">正方形画像＋キャプション</span></button>
+      <button class="choice" data-format="x"><span class="check"></span><span class="who">X投稿</span><span class="sub">140字以内の本文＋画像</span></button>
+      <button class="choice" disabled><span class="who">リール／ショート動画</span><span class="soon">今後対応予定</span></button>
+    </div>
+
+    <div class="actions">
+      <button class="btn ghost" data-go="1">戻る</button>
+      <button class="btn primary" id="generate">投稿を作る</button>
+    </div>
+  </section>
+
+  <!-- S3 生成中 -->
+  <section class="screen" id="s3">
+    <div class="loading">
+      <p>投稿を作成しています</p>
+      <div class="bar"><i id="bar"></i></div>
+      <div class="sub" id="loading-sub"></div>
+    </div>
+  </section>
+
+  <!-- S4 結果 -->
+  <section class="screen" id="s4">
+    <div class="result-head">
+      <h1>投稿ができました</h1>
+      <span class="pill" id="r-aud"></span>
+      <span class="pill gray" id="r-fmt"></span>
+    </div>
+    <div class="result">
+      <div id="preview"></div>
+      <div class="panel">
+        <button class="btn primary" id="copy">文章をコピー</button>
+        <button class="btn" id="save">画像を保存<span class="hint">PNG・1080×1080</span></button>
+        <button class="btn" id="another">別の案を出す<span class="hint" id="variant-hint"></span></button>
+        <button class="btn" id="change">相手を変えて作り直す<span class="hint">素材はそのまま</span></button>
+        <div class="toast" id="toast"></div>
+        <div class="tips">
+          <h2>この相手に合わせた工夫</h2>
+          <ul id="tips"></ul>
+        </div>
+        <p class="confirm">投稿は内容を確認してから、各SNSに貼り付けてください。</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* =========================================================
+   設定
+   ========================================================= */
+// API接続モードのエンドポイント（server.py で配信している場合は同一オリジン）
+const API_ENDPOINT = location.protocol.startsWith('http') ? '/generate' : 'http://localhost:8000/generate';
+const LOADING_MS = 1500;
+
+/* =========================================================
+   サンプル文面（ダミー出力）
+   {kura} は蔵名に置き換わります
+   ========================================================= */
+const AUDIENCES = {
+  A: {
+    key: 'A', who: '20〜30代女性', sub: '日本酒好き・外飲み派', rec: 'ig', lang: 'ja',
+    tips: ['季節感と情景で「行ってみたい」を引き出す', 'やわらかい語り口、余白の多い改行', '旅・蔵巡りで見つかるハッシュタグ'],
+  },
+  B: {
+    key: 'B', who: '40〜60代男性', sub: '晩酌・地酒好き', rec: 'x', lang: 'ja',
+    tips: ['銘柄名と味の特徴を具体的に', '燗など飲み方に触れる', '要点から先に、簡潔に'],
+  },
+  C: {
+    key: 'C', who: '訪日観光客', sub: '日本文化に関心 ・ 英語で作成', rec: 'ig', lang: 'en',
+    tips: ['英語で作成', '「ひやおろし」とは何かを一言で説明', '旅行者が検索するハッシュタグ'],
+  },
+};
+
+const POSTS = {
+  'A-ig': [
+    {
+      banner: ['夏を越した、まろやかさ。', 'ひやおろし 出荷開始'],
+      caption: `夏を越した、まろやかな一杯。
+{kura}の「ひやおろし」、今年も出荷がはじまりました。
+ひと夏ゆっくり寝かせたぶん、角がとれてやさしい口当たりに。
+
+10月12日（日）は年に一度の蔵開き。
+蔵の空気のなかで、ひやおろしを試飲できます。
+山形の秋を、蔵ごと味わいにきてください。`,
+      hashtags: ['#ひやおろし', '#日本酒好きな人と繋がりたい', '#酒蔵巡り', '#山形旅', '#蔵開き', '#{kura}'],
+    },
+    {
+      banner: ['秋だけの、飲みごろ。', '10月12日 蔵開きで試飲'],
+      caption: `秋だけの、飲みごろ。
+春に搾ったお酒を蔵でひと夏寝かせた「ひやおろし」が届きました。
+10月12日（日）の蔵開きでは、蔵人と話しながら飲み比べができます。
+週末の小さな旅先に、霞川の蔵はいかがですか。`,
+      hashtags: ['#ひやおろし', '#日本酒好きな人と繋がりたい', '#酒蔵巡り', '#山形旅', '#蔵開き', '#{kura}'],
+    },
+  ],
+  'A-x': [
+    {
+      banner: ['夏を越した、まろやかさ。', 'ひやおろし 出荷開始'],
+      caption: `夏を越して、まろやかに。{kura}の「ひやおろし」出荷がはじまりました。10/12（日）の蔵開きでは、蔵の空気のなかで試飲できます。山形の秋を、蔵ごと味わいにきてください。`,
+      hashtags: ['#ひやおろし', '#酒蔵巡り', '#山形旅'],
+    },
+  ],
+  'B-x': [
+    {
+      banner: ['一夏の熟成、燗で旨い。', '純米吟醸 ひやおろし 出荷開始'],
+      caption: `【ひやおろし出荷開始】霞川 純米吟醸ひやおろし、今年も出ました。一夏の熟成で角が取れ、燗にしても崩れない仕上がり。10/12（日）の蔵開きでは蔵元と話しながら試飲できます。秋の晩酌にぜひ。`,
+      hashtags: ['#ひやおろし', '#地酒', '#山形'],
+    },
+    {
+      banner: ['十月十二日、蔵開き。', 'ひやおろしを蔵元と'],
+      caption: `【蔵開きのご案内】10/12（日）、{kura}の蔵開きを行います。今年のひやおろしは一夏の熟成で旨みが乗り、ぬる燗がおすすめ。蔵元が造りの話をしながらご案内します。`,
+      hashtags: ['#ひやおろし', '#地酒', '#蔵開き'],
+    },
+  ],
+  'B-ig': [
+    {
+      banner: ['一夏の熟成、燗で旨い。', '純米吟醸 ひやおろし 出荷開始'],
+      caption: `霞川 純米吟醸 ひやおろし、今年も出荷を開始しました。
+春に搾った酒を蔵で一夏寝かせ、角の取れた落ち着いた味わいに。冷やでも、ぬる燗でも崩れません。秋の晩酌にどうぞ。
+
+10月12日（日）は蔵開き。蔵元と話しながら、ひやおろしを試飲いただけます。`,
+      hashtags: ['#ひやおろし', '#地酒', '#日本酒', '#晩酌', '#山形', '#{kura}'],
+    },
+  ],
+  'C-ig': [
+    {
+      banner: ['Autumn in a bottle.', 'Hiyaoroshi is here'],
+      caption: `Autumn in a bottle.
+Our hiyaoroshi — sake rested through the summer — is out now.
+Mellow, round, and made for cooler evenings.
+
+Join our brewery open house on Oct 12 in Yamagata:
+taste it at the source, meet the brewers, and walk through the old storehouse.`,
+      hashtags: ['#sake', '#hiyaoroshi', '#yamagata', '#japantravel', '#sakebrewery'],
+    },
+    {
+      banner: ['Sake has seasons.', 'Open house · Oct 12'],
+      caption: `Sake has seasons, too.
+Hiyaoroshi is pressed in spring, rested through the summer, and released in autumn — softer and rounder than fresh sake.
+
+Oct 12 is our annual open house in Yamagata.
+Come taste it where it was made.`,
+      hashtags: ['#sake', '#hiyaoroshi', '#yamagata', '#japantravel', '#sakebrewery'],
+    },
+  ],
+  'C-x': [
+    {
+      banner: ['Autumn in a bottle.', 'Hiyaoroshi is here'],
+      caption: `Autumn in a bottle: our hiyaoroshi, sake rested through the summer, is out now. Taste it at our brewery open house in Yamagata on Oct 12.`,
+      hashtags: ['#sake', '#hiyaoroshi', '#japantravel'],
+    },
+  ],
+};
+
+const FORMAT_LABEL = { ig: 'Instagram投稿', x: 'X投稿' };
+const LOADING_STEPS = ['写真を正方形に整えています', '相手に合わせて文章を書いています', '投稿用の画像を仕上げています'];
+
+/* =========================================================
+   状態
+   ========================================================= */
+const state = {
+  step: 0,
+  photo: null,        // HTMLImageElement（未アップロード時は null → サンプル画像）
+  audience: 'A',
+  format: 'ig',
+  variant: 0,
+  mode: 'dummy',
+  post: null,         // {banner:[l1,l2], caption, hashtags:[]}
+};
+
+const $ = (s) => document.querySelector(s);
+const profile = () => ({
+  name: $('#p-name').value.trim() || '霞川酒造',
+  pref: $('#p-pref').value.trim(),
+  brand: $('#p-brand').value.trim(),
+  feature: $('#p-feature').value.trim(),
+});
+
+/* =========================================================
+   画面遷移
+   ========================================================= */
+function go(step) {
+  state.step = step;
+  document.querySelectorAll('.screen').forEach((el) => el.classList.toggle('active', el.id === 's' + step));
+  const shown = step === 3 ? 2 : step;
+  document.querySelectorAll('#steps li').forEach((li) => {
+    const n = +li.dataset.step;
+    li.classList.toggle('active', n === shown || (n === 4 && step === 4));
+    li.classList.toggle('done', n < shown);
+  });
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => go(+b.dataset.go)));
+
+/* =========================================================
+   S1 写真
+   ========================================================= */
+$('#pick').addEventListener('click', () => $('#file').click());
+$('#file').addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const img = new Image();
+  img.onload = () => { state.photo = img; renderThumb(); };
+  img.src = URL.createObjectURL(f);
+});
+$('#clear-photo').addEventListener('click', () => { state.photo = null; $('#file').value = ''; renderThumb(); });
+
+function renderThumb() {
+  const c = $('#thumb');
+  drawBase(c.getContext('2d'), c.width, state.photo);
+  $('#photo-tag').textContent = state.photo ? 'アップロードした写真' : 'サンプル画像';
+  $('#clear-photo').hidden = !state.photo;
+}
+
+/* =========================================================
+   S2 相手・形式
+   ========================================================= */
+function renderAudiences() {
+  $('#audiences').innerHTML = Object.values(AUDIENCES).map((a) => `
+    <button class="choice" data-aud="${a.key}" aria-pressed="${a.key === state.audience}">
+      <span class="check"></span>
+      <span class="key">相手 ${a.key}</span>
+      <span class="who">${a.who}</span>
+      <span class="sub">${a.sub}</span>
+      <span class="rec">おすすめ：${FORMAT_LABEL[a.rec]}</span>
+    </button>`).join('');
+  document.querySelectorAll('[data-aud]').forEach((b) => b.addEventListener('click', () => {
+    state.audience = b.dataset.aud;
+    state.format = AUDIENCES[state.audience].rec;  // おすすめ形式を自動選択（変更可）
+    renderAudiences(); renderFormats();
+  }));
+}
+function renderFormats() {
+  document.querySelectorAll('[data-format]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.format === state.format));
+}
+document.querySelectorAll('[data-format]').forEach((b) => b.addEventListener('click', () => {
+  state.format = b.dataset.format; renderFormats();
+}));
+
+/* =========================================================
+   生成
+   ========================================================= */
+function variantsFor(aud, fmt) {
+  // 用意のない組み合わせは同じ相手の別形式を流用
+  return POSTS[`${aud}-${fmt}`] || POSTS[`${aud}-${AUDIENCES[aud].rec}`];
+}
+function fill(s) {
+  const name = profile().name;
+  return s.replaceAll('{kura}', s.startsWith('#') ? name.replace(/\s/g, '') : name);
+}
+function dummyPost(aud, fmt, v) {
+  const list = variantsFor(aud, fmt);
+  const p = list[v % list.length];
+  return { banner: p.banner.slice(), caption: fill(p.caption), hashtags: p.hashtags.map(fill) };
+}
+
+async function apiPost() {
+  const res = await fetch(API_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      profile: profile(),
+      memo: $('#memo').value,
+      audience: `${AUDIENCES[state.audience].who}／${AUDIENCES[state.audience].sub}`,
+      language: AUDIENCES[state.audience].lang,
+      format: state.format,
+    }),
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const j = await res.json();
+  const banner = String(j.banner_text || '').split(/[／\/\n]/).map((s) => s.trim()).filter(Boolean);
+  return {
+    banner: [banner[0] || '', banner[1] || ''],
+    caption: j.caption || '',
+    hashtags: Array.isArray(j.hashtags) ? j.hashtags : String(j.hashtags || '').split(/\s+/).filter(Boolean),
+  };
+}
+
+async function generate(newVariant) {
+  go(3);
+  const bar = $('#bar');
+  bar.classList.remove('run'); void bar.offsetWidth; bar.classList.add('run');
+  let i = 0;
+  $('#loading-sub').textContent = LOADING_STEPS[0];
+  const timer = setInterval(() => { i = Math.min(i + 1, LOADING_STEPS.length - 1); $('#loading-sub').textContent = LOADING_STEPS[i]; }, LOADING_MS / 3);
+
+  state.variant = newVariant ? state.variant + 1 : 0;
+  let warn = '';
+  const wait = new Promise((r) => setTimeout(r, LOADING_MS));
+  let post;
+  if (state.mode === 'api') {
+    try { [post] = await Promise.all([apiPost(), wait]); }
+    catch (e) { warn = 'API に接続できなかったため、サンプル文面を表示しています。'; }
+  }
+  if (!post) { await wait; post = dummyPost(state.audience, state.format, state.variant); }
+  await fontsReady;
+  clearInterval(timer);
+  state.post = post;
+  renderResult(warn);
+  go(4);
+}
+$('#generate').addEventListener('click', () => generate(false));
+$('#another').addEventListener('click', () => generate(true));
+$('#change').addEventListener('click', () => go(2));
+
+/* =========================================================
+   S4 結果
+   ========================================================= */
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function postText() {
+  const p = state.post;
+  return state.format === 'x'
+    ? `${p.caption} ${p.hashtags.join(' ')}`
+    : `${p.caption}\n\n${p.hashtags.join(' ')}`;
+}
+
+function renderResult(warn) {
+  const a = AUDIENCES[state.audience];
+  const pf = profile();
+  const p = state.post;
+  const handle = 'kasumigawa_shuzo';
+  const initial = pf.name.charAt(0);
+  $('#r-aud').textContent = `相手 ${a.key}：${a.who}`;
+  $('#r-fmt').textContent = FORMAT_LABEL[state.format] + (a.lang === 'en' ? '・英語' : '');
+
+  if (state.format === 'ig') {
+    $('#preview').innerHTML = `
+      <div class="sns ig">
+        <div class="sns-head"><span class="avatar">${esc(initial)}</span>
+          <div><div class="sns-name">${handle}</div><div class="sns-meta">${esc(pf.pref)}</div></div></div>
+        <canvas id="post-canvas" width="1080" height="1080"></canvas>
+        <div class="ig-icons"><i></i><i></i><i></i></div>
+        <div class="ig-caption"><b>${handle}</b>${esc(p.caption)}\n\n<span class="tags">${esc(p.hashtags.join(' '))}</span></div>
+      </div>`;
+  } else {
+    const len = [...postText()].length;
+    const limit = a.lang === 'en' ? 280 : 140;
+    $('#preview').innerHTML = `
+      <div class="sns x">
+        <div class="sns-head"><span class="avatar">${esc(initial)}</span>
+          <div><div class="sns-name">${esc(pf.name)}</div><div class="sns-meta">@${handle}</div></div></div>
+        <div class="x-body">${esc(p.caption)} <span class="tags">${esc(p.hashtags.join(' '))}</span></div>
+        <div class="x-img"><canvas id="post-canvas" width="1080" height="1080"></canvas></div>
+        <div class="x-foot"><span>いま</span><span>${len} / ${limit}字</span></div>
+      </div>`;
+  }
+  drawPost($('#post-canvas'), p.banner);
+
+  $('#tips').innerHTML = a.tips.map((t) => `<li>${esc(t)}</li>`).join('');
+  const n = variantsFor(state.audience, state.format).length;
+  $('#variant-hint').textContent = state.mode === 'api' ? '' : `${(state.variant % n) + 1} / ${n} 案`;
+  const copy = $('#copy');
+  copy.textContent = '文章をコピー'; copy.classList.remove('copied');
+  const toast = $('#toast');
+  toast.textContent = warn; toast.style.display = warn ? 'block' : 'none';
+}
+
+$('#copy').addEventListener('click', async () => {
+  const text = postText();
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+  }
+  const b = $('#copy');
+  b.textContent = 'コピーしました'; b.classList.add('copied');
+  setTimeout(() => { b.textContent = '文章をコピー'; b.classList.remove('copied'); }, 2000);
+});
+
+$('#save').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.download = `post_${state.audience}_${state.format}.png`;
+  a.href = $('#post-canvas').toDataURL('image/png');
+  a.click();
+});
+
+/* =========================================================
+   Canvas：写真を正方形にトリミング＋キャッチコピー
+   ========================================================= */
+function drawSample(ctx, S) {
+  // 蔵の板壁と杉玉（サンプル画像）
+  ctx.fillStyle = '#3A3128';
+  ctx.fillRect(0, 0, S, S);
+  const plank = S / 9;
+  for (let i = 0; i < 9; i++) {
+    ctx.fillStyle = i % 2 ? 'rgba(255,255,255,.035)' : 'rgba(0,0,0,.08)';
+    ctx.fillRect(i * plank, 0, plank, S);
+    ctx.fillStyle = 'rgba(0,0,0,.25)';
+    ctx.fillRect(i * plank, 0, Math.max(1, S / 540), S);
+  }
+  const cx = S / 2, cy = S * 0.38, r = S * 0.2;
+  ctx.strokeStyle = '#1E1A15'; ctx.lineWidth = S / 180;
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, cy - r); ctx.stroke();
+  const g = ctx.createRadialGradient(cx - r * .3, cy - r * .3, r * .1, cx, cy, r);
+  g.addColorStop(0, '#8FA864'); g.addColorStop(.7, '#5E7A3A'); g.addColorStop(1, '#3F5526');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  // 葉の質感
+  let seed = 7;
+  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  for (let k = 0; k < 420; k++) {
+    const t = rnd() * Math.PI * 2, d = Math.sqrt(rnd()) * r * .96;
+    const x = cx + Math.cos(t) * d, y = cy + Math.sin(t) * d;
+    ctx.strokeStyle = rnd() > .5 ? 'rgba(30,45,15,.35)' : 'rgba(190,210,150,.25)';
+    ctx.lineWidth = S / 540;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(t) * S * .012, y + Math.sin(t) * S * .012); ctx.stroke();
+  }
+}
+
+function drawBase(ctx, S, img) {
+  if (!img) { drawSample(ctx, S); return; }
+  const side = Math.min(img.naturalWidth, img.naturalHeight);
+  const sx = (img.naturalWidth - side) / 2, sy = (img.naturalHeight - side) / 2;
+  ctx.drawImage(img, sx, sy, side, side, 0, 0, S, S);
+}
+
+function fitFont(ctx, text, weight, size, family, maxW) {
+  let s = size;
+  do { ctx.font = `${weight} ${s}px ${family}`; s -= 2; } while (ctx.measureText(text).width > maxW && s > 20);
+}
+
+function drawPost(canvas, banner) {
+  const ctx = canvas.getContext('2d');
+  const S = canvas.width;
+  drawBase(ctx, S, state.photo);
+  // 下部に文字を読ませるための陰り
+  const g = ctx.createLinearGradient(0, S * .5, 0, S);
+  g.addColorStop(0, 'rgba(20,18,15,0)');
+  g.addColorStop(1, 'rgba(20,18,15,.82)');
+  ctx.fillStyle = g; ctx.fillRect(0, S * .5, S, S * .5);
+
+  const pad = S * 0.075;
+  const mincho = '"Zen Old Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif';
+  ctx.fillStyle = '#fff';
+  ctx.textBaseline = 'alphabetic';
+  ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 12;
+  fitFont(ctx, banner[0], 700, 84, mincho, S - pad * 2);
+  ctx.fillText(banner[0], pad, S - pad - 76);
+  ctx.shadowBlur = 0;
+  // 杉玉の緑の細線
+  ctx.fillStyle = '#9DB872';
+  ctx.fillRect(pad, S - pad - 46, 56, 4);
+  ctx.fillStyle = 'rgba(255,255,255,.92)';
+  fitFont(ctx, banner[1], 600, 40, mincho, S - pad * 2);
+  ctx.fillText(banner[1], pad, S - pad);
+}
+
+/* =========================================================
+   モード切替（ダミー／API）  ?mode=api でも起動可
+   ========================================================= */
+function setMode(m) {
+  state.mode = m;
+  document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.mode === m));
+}
+document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
+if (new URLSearchParams(location.search).get('mode') === 'api') setMode('api');
+
+/* =========================================================
+   初期化
+   ========================================================= */
+const fontsReady = Promise.race([
+  Promise.all([
+    document.fonts.load('700 84px "Zen Old Mincho"', '夏を越したAa'),
+    document.fonts.load('600 40px "Zen Old Mincho"', 'ひやおろしAa'),
+  ]).catch(() => {}),
+  new Promise((r) => setTimeout(r, 2500)),  // オフラインでも止まらない
+]);
+renderAudiences();
+renderFormats();
+renderThumb();
+go(0);
+</script>
+</body>
+</html>
